@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+CYGDIR=${HOME}/.cygwin
+CYGBIN=${CYGDIR}/cygwin.exe
+
+if [ ! -x $CYGBIN ]; then
+	echo "Cygwin is not found or is not executable! Looking for ${CYGBIN}"
+	exit 10
+fi
+
+install_pkg () {
+	run_cygwin --download --packages $@
+}
+
+remove_pkg () {
+	run_cygwin --remove-packages $@
+}
+
+prune_orphans () {
+	run_cygwin --delete-orphans
+}
+
+windowsify_path () {
+	cygpath --windows $@
+}
+
+run_cygwin () {
+	echo "Launching Cygwin Setup..."
+	$CYGBIN $COMMONARGS $*|grep -v "Hand installation over to elevated child process."
+}
+
+send_help () {
+	echo "Usage: $0 <install|remove|autoremove> [args]"
+}
+
+WIN_CYGROOT=$(windowsify_path /)
+COMMONARGS="--wait \
+	--package-manager \
+	--no-shortcuts \
+	--root "${WIN_CYGROOT}" \
+	--local-package-dir "$(windowsify_path ${WIN_CYGROOT}${CYGDIR}/pkgsrc)" \
+	--local-install "
+
+subcmd=$1
+shift
+case $subcmd in
+	install)
+		install_pkg $@
+		;;
+	remove)
+		remove_pkg $@
+		;;
+	autoremove)
+		prune_orphans
+		;;
+	gui)
+		unset COMMONARGS
+		run_cygwin
+		;;
+	*)
+		echo "Unknown subcommand: ${subcmd}"
+		send_help
+		exit 1
+		;;
+esac
+
