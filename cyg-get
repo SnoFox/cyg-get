@@ -15,6 +15,25 @@ remove_pkg () {
 	run_cygwin --remove-packages $@
 }
 
+pkg_opts () {
+	if [ $(echo $@|head -c1) = "-" ]; then
+		while getopts "y" opt; do
+			case $opt in
+				y)
+					ATTENDANCE="--quiet-mode"
+					;;
+				-)
+					break
+					;;
+				*)
+					send_help
+					exit 1
+				
+			esac
+		done
+	fi
+}
+
 prune_orphans () {
 	run_cygwin --delete-orphans
 }
@@ -25,16 +44,21 @@ windowsify_path () {
 
 run_cygwin () {
 	echo "Launching Cygwin Setup..."
-	$CYGBIN $COMMONARGS $*|grep -v "Hand installation over to elevated child process."
+	$CYGBIN $COMMONARGS $ATTENDANCE $*|grep -v "Hand installation over to elevated child process."
 }
 
 send_help () {
-	echo "Usage: $0 <install|remove|autoremove> [args]"
+	echo "Usage: $0 <install|remove|autoremove> [-y] [args]"
 }
 
+echoerr() {
+	cat <<< "$@" 1>&2
+	return
+}
+
+ATTENDANCE="--package-manager"
 WIN_CYGROOT=$(windowsify_path /)
 COMMONARGS="--wait \
-	--package-manager \
 	--no-shortcuts \
 	--root "${WIN_CYGROOT}" \
 	--local-package-dir "$(windowsify_path ${WIN_CYGROOT}${CYGDIR}/pkgsrc)" \
@@ -44,9 +68,13 @@ subcmd=$1
 shift
 case $subcmd in
 	install)
+		pkg_opts $@
+		if [ $OPTIND > 0 ]; then shift $(($OPTIND - 1)); fi
 		install_pkg $@
 		;;
 	remove)
+		pkg_opts $@
+		if [ $OPTIND > 0 ]; then shift $(($OPTIND - 1)); fi
 		remove_pkg $@
 		;;
 	autoremove)
