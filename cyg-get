@@ -8,7 +8,14 @@ if [ ! -x $CYGBIN ]; then
 fi
 
 install_pkg () {
-	run_cygwin --download --packages $@
+	declare pkglist
+	declare comma=false
+	for i in $@; do
+		[ $comma == true ] && pkglist=${pkglist},
+		pkglist=${pkglist}$i
+		comma=true
+	done
+	run_cygwin --download --packages $pkglist
 }
 
 remove_pkg () {
